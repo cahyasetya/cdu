@@ -26,6 +26,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      tag: ${{ steps.semver.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
 
@@ -51,7 +53,8 @@ jobs:
 
   build:
     name: Build (${{ matrix.target }})
-    if: github.event_name == 'push'
+    needs: create-tag
+    if: always() && (needs.create-tag.result == 'success' || needs.create-tag.result == 'skipped')
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -84,7 +87,8 @@ jobs:
 
   release:
     name: Create Release
-    needs: build
+    needs: [create-tag, build]
+    if: always() && needs.build.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -98,5 +102,6 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.create-tag.outputs.tag || github.ref_name }}
           files: dist/*
           generate_release_notes: true
