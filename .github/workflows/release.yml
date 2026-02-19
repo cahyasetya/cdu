@@ -60,6 +60,7 @@ jobs:
     if: always() && (needs.create-tag.result == 'success' || needs.create-tag.result == 'skipped')
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         include:
           - target: x86_64-linux
