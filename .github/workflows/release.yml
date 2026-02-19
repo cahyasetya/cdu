@@ -65,10 +65,10 @@ jobs:
 
       - name: Install Zig
         run: |
-          ZIG_URL=$(curl -fsSL https://ziglang.org/download/index.json | \
-            python3 -c "import sys,json; print(json.load(sys.stdin)['master']['x86_64-linux']['tarball'])")
+          ZIG_FILE="zig-linux-x86_64-0.15.2.tar.xz"
           mkdir -p "$HOME/.zig"
-          curl -fsSL "$ZIG_URL" | tar -xJ --strip-components=1 -C "$HOME/.zig"
+          curl -fsSL "https://ziglang.org/download/0.15.2/${ZIG_FILE}?source=cdu-ci" \
+            | tar -xJ --strip-components=1 -C "$HOME/.zig"
           echo "$HOME/.zig" >> "$GITHUB_PATH"
 
       - name: Build
