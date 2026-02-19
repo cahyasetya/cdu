@@ -27,13 +27,17 @@ jobs:
       tag: ${{ steps.semver.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-tags: true
 
       - name: Compute next version
         id: semver
         run: |
-          LATEST=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          LATEST=$(git ls-remote --tags origin 'refs/tags/v*' \
+            | awk '{print $2}' \
+            | sed 's|refs/tags/||' \
+            | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+            | sort -V \
+            | tail -1)
+          LATEST=${LATEST:-v0.0.0}
           VERSION=${LATEST#v}
           IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
           case "${{ github.event.inputs.bump }}" in
