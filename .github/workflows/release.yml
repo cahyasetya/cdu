@@ -116,3 +116,92 @@ jobs:
           tag_name: ${{ needs.create-tag.outputs.tag || github.ref_name }}
           files: dist/*
           generate_release_notes: true
+
+  update-tap:
+    name: Update Homebrew Tap
+    needs: [create-tag, build, release]
+    if: always() && needs.release.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/
+          merge-multiple: true
+
+      - name: Compute SHA256
+        id: sha
+        run: |
+          echo "aarch64_macos=$(sha256sum dist/cdu-aarch64-macos | awk '{print $1}')" >> $GITHUB_OUTPUT
+          echo "x86_64_macos=$(sha256sum dist/cdu-x86_64-macos | awk '{print $1}')" >> $GITHUB_OUTPUT
+          echo "aarch64_linux=$(sha256sum dist/cdu-aarch64-linux | awk '{print $1}')" >> $GITHUB_OUTPUT
+          echo "x86_64_linux=$(sha256sum dist/cdu-x86_64-linux | awk '{print $1}')" >> $GITHUB_OUTPUT
+
+      - name: Clone tap repo
+        run: |
+          git clone https://x-access-token:${{ secrets.TAP_GITHUB_TOKEN }}@github.com/cahyasetya/homebrew-tap.git tap
+
+      - name: Update formula
+        env:
+          VERSION: ${{ needs.create-tag.outputs.tag || github.ref_name }}
+          SHA256_AARCH64_MACOS: ${{ steps.sha.outputs.aarch64_macos }}
+          SHA256_X86_64_MACOS: ${{ steps.sha.outputs.x86_64_macos }}
+          SHA256_AARCH64_LINUX: ${{ steps.sha.outputs.aarch64_linux }}
+          SHA256_X86_64_LINUX: ${{ steps.sha.outputs.x86_64_linux }}
+        run: |
+          V=${VERSION#v}
+          mkdir -p tap/Formula
+          cat > tap/Formula/cdu.rb << 'FORMULA'
+          class Cdu < Formula
+            desc "Interactive TUI disk usage viewer"
+            homepage "https://github.com/cahyasetya/cdu"
+            version "VER"
+            license "MIT"
+
+            on_macos do
+              if Hardware::CPU.arm?
+                url "https://github.com/cahyasetya/cdu/releases/download/vVER/cdu-aarch64-macos"
+                sha256 "SHA_AARCH64_MACOS"
+              else
+                url "https://github.com/cahyasetya/cdu/releases/download/vVER/cdu-x86_64-macos"
+                sha256 "SHA_X86_64_MACOS"
+              end
+            end
+
+            on_linux do
+              if Hardware::CPU.arm?
+                url "https://github.com/cahyasetya/cdu/releases/download/vVER/cdu-aarch64-linux"
+                sha256 "SHA_AARCH64_LINUX"
+              else
+                url "https://github.com/cahyasetya/cdu/releases/download/vVER/cdu-x86_64-linux"
+                sha256 "SHA_X86_64_LINUX"
+              end
+            end
+
+            def install
+              arch = Hardware::CPU.arm? ? "aarch64" : "x86_64"
+              os_name = OS.mac? ? "macos" : "linux"
+              bin.install "cdu-#{arch}-#{os_name}" => "cdu"
+            end
+
+            test do
+              assert_path_exists bin/"cdu"
+            end
+          end
+          FORMULA
+          sed -i \
+            -e "s/VER/${V}/g" \
+            -e "s/SHA_AARCH64_MACOS/${SHA256_AARCH64_MACOS}/" \
+            -e "s/SHA_X86_64_MACOS/${SHA256_X86_64_MACOS}/" \
+            -e "s/SHA_AARCH64_LINUX/${SHA256_AARCH64_LINUX}/" \
+            -e "s/SHA_X86_64_LINUX/${SHA256_X86_64_LINUX}/" \
+            tap/Formula/cdu.rb
+
+      - name: Commit and push
+        run: |
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/cdu.rb
+          git commit -m "cdu ${{ needs.create-tag.outputs.tag || github.ref_name }}"
+          git push
