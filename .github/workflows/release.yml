@@ -16,9 +16,6 @@ on:
     tags:
       - 'v*'
 
-env:
-  ZIG_VERSION: 'master'
-
 jobs:
   create-tag:
     name: Create Tag
@@ -66,10 +63,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Zig
-        uses: mlugg/setup-zig@v1
-        with:
-          version: ${{ env.ZIG_VERSION }}
+      - name: Install Zig
+        run: |
+          ZIG_URL=$(curl -fsSL https://ziglang.org/download/index.json | \
+            python3 -c "import sys,json; print(json.load(sys.stdin)['master']['x86_64-linux']['tarball'])")
+          mkdir -p "$HOME/.zig"
+          curl -fsSL "$ZIG_URL" | tar -xJ --strip-components=1 -C "$HOME/.zig"
+          echo "$HOME/.zig" >> "$GITHUB_PATH"
 
       - name: Build
         run: zig build -Dtarget=${{ matrix.target }} -Doptimize=ReleaseFast
