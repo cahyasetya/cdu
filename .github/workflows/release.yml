@@ -27,6 +27,8 @@ jobs:
       tag: ${{ steps.semver.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-tags: true
 
       - name: Compute next version
         id: semver
