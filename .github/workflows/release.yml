@@ -64,34 +64,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Zig
-        run: |
-          ZIG_FILE="zig-linux-x86_64-0.15.2.tar.xz"
-          MIRRORS=(
-            "https://pkg.machengine.org/zig"
-            "https://zigmirror.hryx.net/zig"
-            "https://zig.linus.dev/zig"
-            "https://zig.squirl.dev"
-            "https://zig.florent.dev"
-            "https://zig.mirror.mschae23.de/zig"
-            "https://zigmirror.meox.dev"
-            "https://ziglang.freetls.fastly.net"
-            "https://zig.tilok.dev"
-            "https://zig-mirror.tsimnet.eu/zig"
-            "https://zig.karearl.com/zig"
-            "https://pkg.earth/zig"
-            "https://fs.liujiacai.net/zigbuilds"
-            "https://ziglang.org/download/0.15.2"
-          )
-          mkdir -p "$HOME/.zig"
-          for MIRROR in $(printf '%s\n' "${MIRRORS[@]}" | shuf); do
-            echo "Trying $MIRROR ..."
-            if curl -fsSL --max-time 60 "${MIRROR}/${ZIG_FILE}?source=cdu-ci" \
-                -o /tmp/zig.tar.xz 2>/dev/null; then
-              tar -xJ --strip-components=1 -C "$HOME/.zig" < /tmp/zig.tar.xz
-              break
-            fi
-          done
-          echo "$HOME/.zig" >> "$GITHUB_PATH"
+        uses: mlugg/setup-zig@v2
+        with:
+          version: latest
 
       - name: Build
         run: zig build -Dtarget=${{ matrix.target }} -Doptimize=ReleaseFast
