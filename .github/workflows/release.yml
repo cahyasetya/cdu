@@ -17,7 +17,7 @@ on:
       - 'v*'
 
 env:
-  ZIG_VERSION: '0.15.2'
+  ZIG_VERSION: 'master'
 
 jobs:
   create-tag:
