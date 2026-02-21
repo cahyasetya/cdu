@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   release:
-    uses: cahyasetya/homebrew-tap/.github/workflows/release-zig.yml@main
+    uses: cahyasetya/homebrew-tap/.github/workflows/release-zig.yml@master
     with:
       binary_name: cdu
       description: "Interactive TUI disk usage viewer"
